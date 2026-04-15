@@ -1,0 +1,18 @@
+EE_BIN = opentyrian.elf
+SRC_DIR = src
+OBJ_DIR = obj
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+EE_OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
+EE_CFLAGS = -std=c99 -G0 -O2 -Wall -DTARGET_PS2 -DNDEBUG -Wno-missing-field-initializers -I$(SRC_DIR) -fcommon
+EE_INCS = -I$(PS2SDK)/ports/include -I$(PS2SDK)/ports/include/SDL
+EE_LDFLAGS = -L$(PS2SDK)/ports/lib -L$(GSKIT)/lib
+EE_LIBS = -ldebug -lpatches -lsdlmain -lsdl -lgskit -ldmakit -lcdvd -lpad -laudsrv -lmc -lm -lc -lkernel
+include $(PS2SDK)/samples/Makefile.pref
+include $(PS2SDK)/samples/Makefile.eeglobal
+all: $(OBJ_DIR) $(EE_BIN)
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+clean:
+	rm -rf $(OBJ_DIR) $(EE_BIN)
