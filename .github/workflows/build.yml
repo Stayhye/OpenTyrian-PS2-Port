@@ -34,26 +34,17 @@ jobs:
           export PS2SDK=$PS2DEV/ps2sdk
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Use --recursive to pull the actual source for SDL_mixer/SDL_image
           git clone --recursive https://github.com/ps2dev/ps2sdk-ports.git
           cd ps2sdk-ports
 
-          # 1. Build SDL Base
+          # Build Core Dependencies
           cd sdl && make && make install && cd ..
-
-          # 2. Build libmad (Dependency for Mixer)
           cd libmad && make && make install && cd ..
-          
-          # 3. Build audsrv (Required for OpenTyrian audio)
           cd audsrv && make && make install && cd ..
 
-          # 4. Build SDL_mixer
-          # Use case-insensitive search to find the folder regardless of naming
+          # Build SDL_mixer using case-insensitive search
           MIXER_DIR=$(find . -maxdepth 1 -type d -iname "*sdl_mixer*")
-          echo "Found Mixer directory: $MIXER_DIR"
           cd "$MIXER_DIR"
-          
-          # Check for Makefile in root or 'ee' subfolder
           if [ -f "Makefile" ]; then
             make && make install
           elif [ -d "ee" ]; then
@@ -67,7 +58,12 @@ jobs:
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Clean and Build
+          # Ensure the obj directory is clean for the runner
+          rm -rf obj
+          mkdir -p obj
+          
+          # Build using your provided Makefile.ps2
+          # Your Makefile handles the src/ to obj/ mapping automatically
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
