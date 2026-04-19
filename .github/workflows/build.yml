@@ -16,30 +16,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          # 1. Add the modern repo
-          echo "https://apk-repo.ps2dev.org" >> /etc/apk/repositories
-          apk update
-          
-          # 2. Install the specific packages your Makefile needs
-          # Note: gskit and sdl are essential for this specific port
-          apk add --no-cache \
-            build-base \
-            git \
-            ps2-gsKit \
-            ps2-libsdl \
-            ps2-ps2sdk-ports
+      - name: Install Build Tools
+        run: apk add --no-cache build-base git bash cmake
 
-      - name: Compile OpenTyrian
+      - name: Build gsKit
         run: |
-          # Set up environment variables required by Makefile.pref
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Use the specific Makefile you provided
+          git clone https://github.com/ps2dev/gsKit.git
+          cd gsKit
+          ./setup.sh
+          # We manually point to the install dir if setup.sh doesn't
+          make install
+
+      - name: Build SDL and Ports
+        run: |
+          export PS2DEV=/usr/local/ps2dev
+          export PS2SDK=$PS2DEV/ps2sdk
+          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
+          
+          # Clone the ports repository
+          git clone https://github.com/ps2dev/ps2sdk-ports.git
+          
+          # We need SDL, SDL_mixer, and SDL_image
+          # Note: We build them one by one to ensure dependencies are met
+          cd ps2sdk-ports/sdl
+          make && make install
+          
+          # If OpenTyrian needs audio/images, we do these too:
+          cd ../sdl_mixer
+          make && make install
+          cd ../sdl_image
+          make && make install
+
+      - name: Compile OpenTyrian
+        run: |
+          export PS2DEV=/usr/local/ps2dev
+          export PS2SDK=$PS2DEV/ps2sdk
+          export GSKIT=$PS2DEV/gsKit
+          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
+          
+          # Clean and Build
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
