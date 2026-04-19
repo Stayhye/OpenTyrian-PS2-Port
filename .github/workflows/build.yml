@@ -18,8 +18,8 @@ jobs:
 
       - name: Install Build Tools
         run: |
-          # Added gettext-dev for autopoint support
-          apk add --no-cache build-base git bash cmake autoconf automake libtool gettext-dev
+          # Added pkgconf and gettext-dev to satisfy dependency scripts
+          apk add --no-cache build-base git bash cmake autoconf automake libtool gettext-dev pkgconf
 
       - name: Build gsKit
         run: |
@@ -60,7 +60,7 @@ jobs:
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Generate the embedded IRX files per your README
+          # Generate the embedded IRX files
           bin2c $PS2SDK/iop/irx/usbd.irx src/usbd_irx.c usbd_irx
           bin2c $PS2SDK/iop/irx/bdm.irx src/bdm_irx.c bdm_irx
           bin2c $PS2SDK/iop/irx/bdmfs_fatfs.irx src/bdmfs_fatfs_irx.c bdmfs_fatfs_irx
@@ -77,7 +77,7 @@ jobs:
           make -f Makefile.ps2
 
       - name: Upload Artifact
-        uses: actions/artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: opentyrian-ps2-elf
           path: opentyrian.elf
