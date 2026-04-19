@@ -18,8 +18,19 @@ jobs:
 
       - name: Install Build Tools
         run: |
-          # Added pkgconf and gettext-dev to satisfy dependency scripts
-          apk add --no-cache build-base git bash cmake autoconf automake libtool gettext-dev pkgconf
+          # Added flex and bison to satisfy libconfuse and other lexer-based ports
+          apk add --no-cache \
+            build-base \
+            git \
+            bash \
+            cmake \
+            autoconf \
+            automake \
+            libtool \
+            gettext-dev \
+            pkgconf \
+            flex \
+            bison
 
       - name: Build gsKit
         run: |
