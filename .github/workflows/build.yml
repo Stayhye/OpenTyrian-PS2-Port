@@ -34,7 +34,6 @@ jobs:
           export PS2SDK=$PS2DEV/ps2sdk
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # CRITICAL: Clone with submodules to ensure sdl_mixer isn't empty
           git clone --recursive https://github.com/ps2dev/ps2sdk-ports.git
           cd ps2sdk-ports
 
@@ -44,18 +43,19 @@ jobs:
           # 2. Build libmad
           cd libmad && make && make install && cd ..
           
-          # 3. Build audsrv (Required for OpenTyrian audio)
+          # 3. Build audsrv
           cd audsrv && make && make install && cd ..
 
           # 4. Build SDL_mixer
-          # We use a case-insensitive find to enter the folder
-          cd $(find . -maxdepth 1 -type d -iname "*sdl_mixer*")
-          if [ -f "Makefile" ]; then
-            make && make install
-          elif [ -d "ee" ]; then
-            cd ee && make && make install
-          fi
+          MIXER_DIR=$(find . -maxdepth 1 -type d -iname "*sdl_mixer*")
+          cd "$MIXER_DIR"
+          if [ -f "Makefile" ]; then make && make install; elif [ -d "ee" ]; then cd ee && make && make install; fi
           cd ..
+
+          # 5. Build SDL_image (Added to prevent potential link errors)
+          IMAGE_DIR=$(find . -maxdepth 1 -type d -iname "*sdl_image*")
+          cd "$IMAGE_DIR"
+          if [ -f "Makefile" ]; then make && make install; elif [ -d "ee" ]; then cd ee && make && make install; fi
 
       - name: Compile OpenTyrian
         run: |
@@ -64,7 +64,10 @@ jobs:
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Build OpenTyrian
+          # Manually create the obj directory to prevent the Fatal Error
+          mkdir -p obj
+          
+          # Clean and Build
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
