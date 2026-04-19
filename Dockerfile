@@ -1,7 +1,6 @@
-# Stage 1: Build dependencies
-FROM ps2dev/ps2dev:latest AS builder
+FROM ps2dev/ps2dev:latest
 
-# Install build tools
+# Install all necessary build tools for ports
 RUN apk add --no-cache build-base git bash cmake autoconf automake libtool gettext-dev pkgconf flex bison
 
 # 1. Build gsKit
@@ -16,20 +15,12 @@ RUN git clone --recursive https://github.com/ps2dev/ps2sdk-ports.git && \
     cd sdl && make && make install && cd .. && \
     cd libmad && make && make install && cd .. && \
     cd audsrv && make && make install && cd .. && \
-    # Using a wildcard to find the mixer directory
-    cd $(find . -maxdepth 1 -type d -iname "*sdl_mixer*") && \
+    MIXER_DIR=$(find . -maxdepth 1 -type d -iname "*sdl_mixer*") && \
+    cd "$MIXER_DIR" && \
     (if [ -f "Makefile" ]; then make && make install; elif [ -d "ee" ]; then cd ee && make && make install; fi)
 
-# Stage 2: Final Image
-FROM ps2dev/ps2dev:latest
+# Cleanup source to keep image slim
+RUN rm -rf /src/*
 
-# Copy the compiled libraries and headers from the builder stage
-COPY --from=builder /usr/local/ps2dev /usr/local/ps2dev
-
-# Set environment variables
-ENV PS2DEV=/usr/local/ps2dev
-ENV PS2SDK=$PS2DEV/ps2sdk
-ENV GSKIT=$PS2DEV/gsKit
-ENV PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
-
+ENV GSKIT=/usr/local/ps2dev/gsKit
 WORKDIR /src
