@@ -18,35 +18,36 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # The ps2dev image uses Alpine's apk. 
-          # We need to install the portlib packages specifically for the PS2.
-          apk add --no-cache build-base git
+          # 1. Update the local package manager for basic tools
+          apk add --no-cache build-base git bash wget
           
-          # Install the specific PS2 ports needed for OpenTyrian
-          # These are usually prefixed with 'ps2-' in the ps2dev environment
-          apk add --no-cache \
-            ps2-sdk \
-            ps2-ps2sdk-ports \
-            ps2-libmad \
-            ps2-sdl \
-            ps2-sdl_mixer \
-            ps2-sdl_image
+          # 2. Use the built-in ps2-portlibs if available, or fetch the latest
+          # We will try to install the specific libraries required for Tyrian
+          # OpenTyrian needs SDL, SDL_mixer, and SDL_image
+          # Note: 'ps2-portlibs' is an internal tool of the ps2dev environment
+          
+          ps2-portlibs install sdl
+          ps2-portlibs install sdl_mixer
+          ps2-portlibs install sdl_image
+          ps2-portlibs install libmad
 
       - name: Compile project
         run: |
-          # Set the SDK variables just in case they aren't inherited
-          export PS2SDK=/usr/local/ps2dev/ps2sdk
-          export PATH=$PATH:$PS2SDK/bin
-          
-          # OpenTyrian Makefile usually expects these
-          make clean
-          make
+          # Some repos have a 'ps2' subdirectory, others use a specific Makefile
+          # We'll try to find the right one.
+          if [ -f "Makefile.ps2" ]; then
+            make -f Makefile.ps2
+          elif [ -d "ps2" ]; then
+            cd ps2 && make
+          else
+            make
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: OpenTyrian-PS2-Build
           path: |
-            *.elf
-            *.ELF
+            **/*.elf
+            **/*.ELF
           if-no-files-found: error
