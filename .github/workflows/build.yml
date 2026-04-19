@@ -28,29 +28,25 @@ jobs:
           git clone https://github.com/ps2dev/gsKit.git
           cd gsKit && ./setup.sh
 
-      - name: Build SDL 1.2 Base
+      - name: Build SDL and Mixer
         run: |
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
+          
           git clone https://github.com/ps2dev/ps2sdk-ports.git
-          cd ps2sdk-ports/sdl
-          make && make install
+          cd ps2sdk-ports
 
-      - name: Build SDL_mixer Manually
-        run: |
-          export PS2DEV=/usr/local/ps2dev
-          export PS2SDK=$PS2DEV/ps2sdk
-          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
-          
-          # We need libmad for MP3 support in many OpenTyrian builds
-          cd ps2sdk-ports/libmad
-          make && make install
-          cd ../..
-          
-          # Now build the mixer specifically
-          cd ps2sdk-ports/sdl_mixer
-          make && make install
+          # 1. Build SDL Base
+          cd $(find . -maxdepth 2 -type d -iname "sdl") && make && make install
+          cd /__w/OpenTyrian-PS2-Port/OpenTyrian-PS2-Port/ps2sdk-ports
+
+          # 2. Build libmad (Dependency for Mixer)
+          cd $(find . -maxdepth 2 -type d -iname "libmad") && make && make install
+          cd /__w/OpenTyrian-PS2-Port/OpenTyrian-PS2-Port/ps2sdk-ports
+
+          # 3. Build SDL_mixer
+          cd $(find . -maxdepth 2 -type d -iname "sdl_mixer") && make && make install
 
       - name: Compile OpenTyrian
         run: |
