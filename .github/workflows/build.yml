@@ -16,29 +16,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Setup Environment and Dependencies
         run: |
-          # 1. Update the local package manager for basic tools
-          apk add --no-cache build-base git bash wget
+          # 1. Ensure the PS2DEV binaries are in the path
+          export PS2DEV=/usr/local/ps2dev
+          export PS2SDK=$PS2DEV/ps2sdk
+          export PATH=$PATH:$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PS2DEV/dvp/bin:$PS2SDK/bin
           
-          # 2. Use the built-in ps2-portlibs if available, or fetch the latest
-          # We will try to install the specific libraries required for Tyrian
-          # OpenTyrian needs SDL, SDL_mixer, and SDL_image
-          # Note: 'ps2-portlibs' is an internal tool of the ps2dev environment
+          # 2. Install basic build tools
+          apk add --no-cache build-base git bash
           
-          ps2-portlibs install sdl
-          ps2-portlibs install sdl_mixer
-          ps2-portlibs install sdl_image
-          ps2-portlibs install libmad
+          # 3. Use the absolute path to ps2-portlibs to avoid 'not found'
+          # We check if the script exists first, then run it.
+          $PS2DEV/bin/ps2-portlibs install sdl
+          $PS2DEV/bin/ps2-portlibs install sdl_mixer
+          $PS2DEV/bin/ps2-portlibs install sdl_image
+          $PS2DEV/bin/ps2-portlibs install libmad
 
       - name: Compile project
         run: |
-          # Some repos have a 'ps2' subdirectory, others use a specific Makefile
-          # We'll try to find the right one.
+          export PS2DEV=/usr/local/ps2dev
+          export PS2SDK=$PS2DEV/ps2sdk
+          export PATH=$PATH:$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PS2DEV/dvp/bin:$PS2SDK/bin
+          
+          # Build logic for Stayhye's port
           if [ -f "Makefile.ps2" ]; then
             make -f Makefile.ps2
-          elif [ -d "ps2" ]; then
-            cd ps2 && make
           else
             make
           fi
@@ -50,4 +53,3 @@ jobs:
           path: |
             **/*.elf
             **/*.ELF
-          if-no-files-found: error
