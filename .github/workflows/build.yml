@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Build Tools
-        run: apk add --no-cache build-base git bash cmake
+        run: apk add --no-cache build-base git bash cmake autoconf automake libtool
 
       - name: Build gsKit
         run: |
@@ -36,34 +36,35 @@ jobs:
           
           git clone --recursive https://github.com/ps2dev/ps2sdk-ports.git
           cd ps2sdk-ports
-
-          # Build Core Dependencies
           cd sdl && make && make install && cd ..
           cd libmad && make && make install && cd ..
           cd audsrv && make && make install && cd ..
-
-          # Build SDL_mixer using case-insensitive search
+          
           MIXER_DIR=$(find . -maxdepth 1 -type d -iname "*sdl_mixer*")
           cd "$MIXER_DIR"
-          if [ -f "Makefile" ]; then
-            make && make install
-          elif [ -d "ee" ]; then
-            cd ee && make && make install
-          fi
+          if [ -f "Makefile" ]; then make && make install; elif [ -d "ee" ]; then cd ee && make && make install; fi
 
-      - name: Compile OpenTyrian
+      - name: Generate IRX C-Files and Compile
         run: |
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Ensure the obj directory is clean for the runner
+          # 1. Generate the embedded IRX files required by your README
+          # These are necessary for your 'src/ps2_init.c' to compile
+          bin2c $PS2SDK/iop/irx/usbd.irx src/usbd_irx.c usbd_irx
+          bin2c $PS2SDK/iop/irx/bdm.irx src/bdm_irx.c bdm_irx
+          bin2c $PS2SDK/iop/irx/bdmfs_fatfs.irx src/bdmfs_fatfs_irx.c bdmfs_fatfs_irx
+          bin2c $PS2SDK/iop/irx/usbmass_bd.irx src/usbmass_bd_irx.c usbmass_bd_irx
+          bin2c $PS2SDK/iop/irx/sio2man.irx src/sio2man_irx.c sio2man_irx
+          bin2c $PS2SDK/iop/irx/padman.irx src/padman_irx.c padman_irx
+          
+          # 2. Setup folders
           rm -rf obj
           mkdir -p obj
           
-          # Build using your provided Makefile.ps2
-          # Your Makefile handles the src/ to obj/ mapping automatically
+          # 3. Build
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
