@@ -1,0 +1,40 @@
+name: Build OpenTyrian PS2
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ps2dev/ps2dev:latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apk add --no-cache build-base git
+          # Install required PS2 ports (SDL is mandatory for OpenTyrian)
+          ps2-packer --version || echo "ps2-packer not found, continuing..."
+          # The following installs the common libraries used by OpenTyrian
+          ps2-portlibs install sdl sdl_mixer sdl_image
+
+      - name: Compile project
+        run: |
+          # Clean previous builds and compile
+          make clean
+          make
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenTyrian-PS2-ELF
+          path: |
+            *.elf
+            *.ELF
+          if-no-files-found: error
