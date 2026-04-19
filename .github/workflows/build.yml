@@ -19,7 +19,7 @@ jobs:
       - name: Install Build Tools
         run: apk add --no-cache build-base git bash cmake
 
-      - name: Build and Install gsKit
+      - name: Build gsKit
         run: |
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
@@ -28,26 +28,29 @@ jobs:
           git clone https://github.com/ps2dev/gsKit.git
           cd gsKit && ./setup.sh
 
-      - name: Build and Install SDL Ports
+      - name: Build SDL 1.2 Base
+        run: |
+          export PS2DEV=/usr/local/ps2dev
+          export PS2SDK=$PS2DEV/ps2sdk
+          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
+          git clone https://github.com/ps2dev/ps2sdk-ports.git
+          cd ps2sdk-ports/sdl
+          make && make install
+
+      - name: Build SDL_mixer Manually
         run: |
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          git clone https://github.com/ps2dev/ps2sdk-ports.git
-          cd ps2sdk-ports
+          # We need libmad for MP3 support in many OpenTyrian builds
+          cd ps2sdk-ports/libmad
+          make && make install
+          cd ../..
           
-          # 1. Build Base SDL
-          cd sdl && make && make install && cd ..
-          
-          # 2. Build libmad (Often required for SDL_mixer)
-          cd libmad && make && make install && cd ..
-          
-          # 3. Build SDL_mixer (Using wildcard to handle case-sensitivity)
-          cd *sdl_mixer* && make && make install && cd ..
-          
-          # 4. Build SDL_image
-          cd *sdl_image* && make && make install && cd ..
+          # Now build the mixer specifically
+          cd ps2sdk-ports/sdl_mixer
+          make && make install
 
       - name: Compile OpenTyrian
         run: |
@@ -56,7 +59,7 @@ jobs:
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Force clean and build
+          # Clean and Build
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
