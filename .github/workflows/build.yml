@@ -3,75 +3,25 @@ name: Build OpenTyrian PS2
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    paths-ignore:
+      - 'Dockerfile' # Don't trigger game build if we are only changing the env
 
 jobs:
-  build:
+  build-game:
     runs-on: ubuntu-latest
-    container: ps2dev/ps2dev:latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/opentyrian-env:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Build Tools
+      - name: Compile OpenTyrian
         run: |
-          # Added flex and bison to satisfy libconfuse and other lexer-based ports
-          apk add --no-cache \
-            build-base \
-            git \
-            bash \
-            cmake \
-            autoconf \
-            automake \
-            libtool \
-            gettext-dev \
-            pkgconf \
-            flex \
-            bison
-
-      - name: Build gsKit
-        run: |
-          export PS2DEV=/usr/local/ps2dev
-          export PS2SDK=$PS2DEV/ps2sdk
-          export GSKIT=$PS2DEV/gsKit
-          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
-          git clone https://github.com/ps2dev/gsKit.git
-          cd gsKit && ./setup.sh
-
-      - name: Build SDL and Ports
-        run: |
-          export PS2DEV=/usr/local/ps2dev
-          export PS2SDK=$PS2DEV/ps2sdk
-          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
-          
-          git clone --recursive https://github.com/ps2dev/ps2sdk-ports.git
-          cd ps2sdk-ports
-
-          # Build Core Dependencies
-          cd sdl && make && make install && cd ..
-          cd libmad && make && make install && cd ..
-          cd audsrv && make && make install && cd ..
-
-          # Build SDL_mixer
-          MIXER_DIR=$(find . -maxdepth 1 -type d -iname "*sdl_mixer*")
-          cd "$MIXER_DIR"
-          if [ -f "Makefile" ]; then
-            make && make install
-          elif [ -d "ee" ]; then
-            cd ee && make && make install
-          fi
-
-      - name: Generate IRX C-Files and Compile
-        run: |
-          export PS2DEV=/usr/local/ps2dev
-          export PS2SDK=$PS2DEV/ps2sdk
-          export GSKIT=$PS2DEV/gsKit
-          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
-          
-          # Generate the embedded IRX files
+          # Use bin2c from the custom image to embed IRX files
           bin2c $PS2SDK/iop/irx/usbd.irx src/usbd_irx.c usbd_irx
           bin2c $PS2SDK/iop/irx/bdm.irx src/bdm_irx.c bdm_irx
           bin2c $PS2SDK/iop/irx/bdmfs_fatfs.irx src/bdmfs_fatfs_irx.c bdmfs_fatfs_irx
@@ -79,11 +29,7 @@ jobs:
           bin2c $PS2SDK/iop/irx/sio2man.irx src/sio2man_irx.c sio2man_irx
           bin2c $PS2SDK/iop/irx/padman.irx src/padman_irx.c padman_irx
           
-          # Setup project folders
-          rm -rf obj
           mkdir -p obj
-          
-          # Build OpenTyrian
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
