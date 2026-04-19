@@ -25,11 +25,8 @@ jobs:
           export PS2SDK=$PS2DEV/ps2sdk
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
-          
           git clone https://github.com/ps2dev/gsKit.git
-          cd gsKit
-          # setup.sh usually handles the full build/install for gsKit
-          ./setup.sh
+          cd gsKit && ./setup.sh
 
       - name: Build and Install SDL Ports
         run: |
@@ -40,13 +37,17 @@ jobs:
           git clone https://github.com/ps2dev/ps2sdk-ports.git
           cd ps2sdk-ports
           
-          # We use the root Makefile to build exactly what OpenTyrian needs
-          # This avoids the "cd" errors by staying in the root
-          make sdl
-          make sdl_mixer
-          make sdl_image
-          # These install to $PS2SDK/ports automatically
-          make install
+          # 1. Build Base SDL
+          cd sdl && make && make install && cd ..
+          
+          # 2. Build libmad (Often required for SDL_mixer)
+          cd libmad && make && make install && cd ..
+          
+          # 3. Build SDL_mixer (Using wildcard to handle case-sensitivity)
+          cd *sdl_mixer* && make && make install && cd ..
+          
+          # 4. Build SDL_image
+          cd *sdl_image* && make && make install && cd ..
 
       - name: Compile OpenTyrian
         run: |
@@ -55,7 +56,7 @@ jobs:
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Clean and Build using your provided Makefile
+          # Force clean and build
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
