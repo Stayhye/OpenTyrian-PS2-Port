@@ -18,22 +18,34 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # The ps2dev image uses Alpine's apk. 
+          # We need to install the portlib packages specifically for the PS2.
           apk add --no-cache build-base git
-          # Install required PS2 ports (SDL is mandatory for OpenTyrian)
-          ps2-packer --version || echo "ps2-packer not found, continuing..."
-          # The following installs the common libraries used by OpenTyrian
-          ps2-portlibs install sdl sdl_mixer sdl_image
+          
+          # Install the specific PS2 ports needed for OpenTyrian
+          # These are usually prefixed with 'ps2-' in the ps2dev environment
+          apk add --no-cache \
+            ps2-sdk \
+            ps2-ps2sdk-ports \
+            ps2-libmad \
+            ps2-sdl \
+            ps2-sdl_mixer \
+            ps2-sdl_image
 
       - name: Compile project
         run: |
-          # Clean previous builds and compile
+          # Set the SDK variables just in case they aren't inherited
+          export PS2SDK=/usr/local/ps2dev/ps2sdk
+          export PATH=$PATH:$PS2SDK/bin
+          
+          # OpenTyrian Makefile usually expects these
           make clean
           make
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenTyrian-PS2-ELF
+          name: OpenTyrian-PS2-Build
           path: |
             *.elf
             *.ELF
