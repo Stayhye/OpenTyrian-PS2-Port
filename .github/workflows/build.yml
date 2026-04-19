@@ -19,7 +19,7 @@ jobs:
       - name: Install Build Tools
         run: apk add --no-cache build-base git bash cmake
 
-      - name: Build gsKit
+      - name: Build and Install gsKit
         run: |
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
@@ -38,15 +38,30 @@ jobs:
           cd ps2sdk-ports
 
           # 1. Build SDL Base
-          cd $(find . -maxdepth 2 -type d -iname "sdl") && make && make install
-          cd /__w/OpenTyrian-PS2-Port/OpenTyrian-PS2-Port/ps2sdk-ports
+          echo "Building SDL..."
+          cd sdl && make && make install
+          cd ..
 
-          # 2. Build libmad (Dependency for Mixer)
-          cd $(find . -maxdepth 2 -type d -iname "libmad") && make && make install
-          cd /__w/OpenTyrian-PS2-Port/OpenTyrian-PS2-Port/ps2sdk-ports
+          # 2. Build libmad
+          echo "Building libmad..."
+          cd libmad && make && make install
+          cd ..
 
           # 3. Build SDL_mixer
-          cd $(find . -maxdepth 2 -type d -iname "sdl_mixer") && make && make install
+          # We check for both possible folder names
+          echo "Building SDL_mixer..."
+          if [ -d "sdl_mixer" ]; then cd sdl_mixer; else cd SDL_mixer; fi
+          
+          # If there is a Makefile here, run it. If not, check the 'ee' folder.
+          if [ -f "Makefile" ]; then
+            make && make install
+          elif [ -d "ee" ]; then
+            cd ee && make && make install
+          else
+            echo "Searching for Makefile in $(pwd)..."
+            find . -name "Makefile"
+            exit 1
+          fi
 
       - name: Compile OpenTyrian
         run: |
@@ -55,7 +70,7 @@ jobs:
           export GSKIT=$PS2DEV/gsKit
           export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Clean and Build
+          # Build OpenTyrian
           make -f Makefile.ps2 clean
           make -f Makefile.ps2
 
