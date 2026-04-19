@@ -16,40 +16,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Environment and Dependencies
+      - name: Install Dependencies
         run: |
-          # 1. Ensure the PS2DEV binaries are in the path
-          export PS2DEV=/usr/local/ps2dev
-          export PS2SDK=$PS2DEV/ps2sdk
-          export PATH=$PATH:$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PS2DEV/dvp/bin:$PS2SDK/bin
+          # 1. Add the modern repo
+          echo "https://apk-repo.ps2dev.org" >> /etc/apk/repositories
+          apk update
           
-          # 2. Install basic build tools
-          apk add --no-cache build-base git bash
-          
-          # 3. Use the absolute path to ps2-portlibs to avoid 'not found'
-          # We check if the script exists first, then run it.
-          $PS2DEV/bin/ps2-portlibs install sdl
-          $PS2DEV/bin/ps2-portlibs install sdl_mixer
-          $PS2DEV/bin/ps2-portlibs install sdl_image
-          $PS2DEV/bin/ps2-portlibs install libmad
+          # 2. Install the specific packages your Makefile needs
+          # Note: gskit and sdl are essential for this specific port
+          apk add --no-cache \
+            build-base \
+            git \
+            ps2-gsKit \
+            ps2-libsdl \
+            ps2-ps2sdk-ports
 
-      - name: Compile project
+      - name: Compile OpenTyrian
         run: |
+          # Set up environment variables required by Makefile.pref
           export PS2DEV=/usr/local/ps2dev
           export PS2SDK=$PS2DEV/ps2sdk
-          export PATH=$PATH:$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PS2DEV/dvp/bin:$PS2SDK/bin
+          export GSKIT=$PS2DEV/gsKit
+          export PATH=$PATH:$PS2DEV/bin:$PS2SDK/bin
           
-          # Build logic for Stayhye's port
-          if [ -f "Makefile.ps2" ]; then
-            make -f Makefile.ps2
-          else
-            make
-          fi
+          # Use the specific Makefile you provided
+          make -f Makefile.ps2 clean
+          make -f Makefile.ps2
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenTyrian-PS2-Build
-          path: |
-            **/*.elf
-            **/*.ELF
+          name: opentyrian-ps2-elf
+          path: opentyrian.elf
